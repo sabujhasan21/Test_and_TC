@@ -162,15 +162,20 @@ def generate_testimonial_pdf(entry, gender, pdf_path):
     )
 
     style = ParagraphStyle(
-    name="Justify",
-    fontName=BANG_FONT,
-    fontSize=11,
-    leading=14,
-    alignment=TA_JUSTIFY,
-)
+        name="Justify",
+        fontName=BANG_FONT,
+        fontSize=11,
+        leading=14,
+        alignment=TA_JUSTIFY,
+    )
 
     p = Paragraph(paragraph, style)
-    frame = Frame(left, sig_y + 15*mm, W-left-right, paragraph_start_y - (sig_y + 15*mm), showBoundary=0)
+    sig_y = 110*mm
+    frame_bottom = sig_y + 15*mm
+    frame_top = paragraph_y - 5
+    frame_height = max(40*mm, frame_top - frame_bottom)
+
+    frame = Frame(left, frame_bottom, W-left-right, frame_height, showBoundary=0)
     frame.addFromList([p], c)
 
     # Signature
@@ -361,4 +366,3 @@ if not db.df.empty:
         db.df = edited_df
         db.save_excel()
         st.success("Excel Saved Successfully!")
-
