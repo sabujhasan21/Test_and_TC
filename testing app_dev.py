@@ -146,9 +146,9 @@ def generate_testimonial_pdf(entry, gender, pdf_path):
 
     # Paragraph
     intro_y = table_y_top-len(keys)*cell_h-10*mm
-    c.setFont(BANG_FONT,12)
+    c.setFont(BANG_FONT,17)
     c.drawCentredString(W/2,intro_y,"This is to certify that")
-    paragraph_y = intro_y - 100*mm  # Line gap
+    paragraph_y = intro_y - 8*mm  # Line gap
 
     paragraph = (
         f"{name} {son_daughter} of {father} and {mother} is a student of Class {student_class}. "
@@ -344,6 +344,7 @@ if not db.df.empty:
         db.df = edited_df
         db.save_excel()
         st.success("Excel Saved Successfully!")
+
 
 
 
