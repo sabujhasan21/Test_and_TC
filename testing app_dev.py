@@ -3,7 +3,6 @@ import os
 import shutil
 import pandas as pd
 from datetime import datetime
-import streamlit as st
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
@@ -11,13 +10,22 @@ from reportlab.platypus import Paragraph, Frame
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_JUSTIFY
 from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase.ttfonts import TTFont, TTFError
+import streamlit as st
 
 # ----------------------------
-# Register Bangla Font
+# Font Setup
 # ----------------------------
-FONT_PATH = "fonts/SolaimanLipi.ttf"  # path to TTF font
-pdfmetrics.registerFont(TTFont("Bangla", FONT_PATH))
+FONT_PATH = os.path.join(os.path.dirname(__file__), "fonts", "SolaimanLipi.ttf")
+BANG_FONT = "Times-Roman"
+try:
+    if os.path.exists(FONT_PATH):
+        pdfmetrics.registerFont(TTFont("Bangla", FONT_PATH))
+        BANG_FONT = "Bangla"
+    else:
+        st.warning(f"Bangla font not found at {FONT_PATH}, using default font.")
+except TTFError:
+    st.warning("Error registering Bangla font, using default font.")
 
 # ----------------------------
 # Student Database
@@ -117,37 +125,39 @@ def generate_testimonial_pdf(entry, gender, pdf_path):
     heading_y = H-60*mm
     c.setLineWidth(1)
     c.roundRect(heading_x,heading_y,heading_w,heading_h,6,stroke=1,fill=0)
-    c.setFont("Bangla",17)
-    c.drawCentredString(W/2,heading_y+heading_h/2-6,"টেস্টিমোনিয়াল সার্টিফিকেট")
+    c.setFont(BANG_FONT,17)
+    c.drawCentredString(W/2,heading_y+heading_h/2-6,"Testimonial Certificate")
 
     # Left table
     table_x = left
     table_y_top = heading_y-20*mm
     cell_w1,cell_w2,cell_h = 30*mm,55*mm,9*mm
-    c.setFont("Bangla",11)
-    keys = ["S/N","তারিখ","আইডি নং","শ্রেণি","সেশন"]
+    c.setFont(BANG_FONT,11)
+    keys = ["S/N","Date","ID No","Class","Session"]
     vals = [str(sn),date,student_id,student_class,session]
     for i,key in enumerate(keys):
         y = table_y_top-i*cell_h
         c.rect(table_x,y-cell_h,cell_w1,cell_h)
         c.rect(table_x+cell_w1,y-cell_h,cell_w2,cell_h)
         c.drawString(table_x+3,y-cell_h/2+2,key)
-        c.drawString(table_x+cell_w1+4,y-cell_h/2+2,vals[i])
+        c.drawString(table_x+cell_w1+4,y-cell_h/2+2,str(vals[i]))
 
-    # Intro paragraph
+    # Intro Paragraph
     intro_y = table_y_top-len(keys)*cell_h-10*mm
-    c.setFont("Bangla",17)
+    c.setFont(BANG_FONT,17)
     c.drawCentredString(W/2,intro_y,"This is to certify that")
 
     paragraph = (
-        f"{name} {son_daughter} of {father} and {mother} হলেন {student_class} শ্রেণির ছাত্র। "
-        f"আইডি নং: {student_id}, সেশন: {session}। "
-        f"জন্ম তারিখ: {dob}। শিক্ষাজীবনের সময় আচরণ ও শৃঙ্খলা ভালো ছিল। "
-        f"{He_She} এর ভবিষ্যতের জন্য শুভকামনা।"
+        f"{name} {son_daughter} of {father} and {mother} is a student of Class: {student_class}. "
+        f"Bearing ID/Roll: {student_id} in Daffodil University School & College. "
+        f"As per our admission record {his_her} date of birth is {dob}. "
+        f"To the best of my knowledge {he_she} was well mannered and possessed a good moral character. "
+        f"{He_She} did not indulge {Him_Her}self in any activity subversive to the state and discipline during study. "
+        f"I wish {Him_Her} every success in life!"
     )
 
     sig_y = 110*mm
-    style = ParagraphStyle(name="Justify", fontName="Bangla", fontSize=11, leading=14, alignment=TA_JUSTIFY)
+    style = ParagraphStyle(name="Justify", fontName=BANG_FONT, fontSize=11, leading=14, alignment=TA_JUSTIFY)
     p = Paragraph(paragraph, style)
     frame_bottom = sig_y+15*mm
     frame_top = intro_y-10
@@ -159,13 +169,14 @@ def generate_testimonial_pdf(entry, gender, pdf_path):
     # Signature
     line_width = 60*mm
     c.line(left,sig_y,left+line_width,sig_y)
-    c.setFont("Bangla",11)
+    c.setFont(BANG_FONT,11)
     text_lines = ["SK Mahmudun Nabi","Principal (Acting)","Daffodil University School & College"]
     for i,line in enumerate(text_lines):
         c.drawString(left,sig_y-12-i*12,line)
     c.save()
 
 def generate_tc_pdf(entry, gender, pdf_path):
+    # Same structure as testimonial PDF, heading changed
     sn = entry["Serial"]
     date = entry["Date"]
     student_id = entry["ID"]
@@ -191,36 +202,38 @@ def generate_tc_pdf(entry, gender, pdf_path):
     heading_y = H-60*mm
     c.setLineWidth(1)
     c.roundRect(heading_x,heading_y,heading_w,heading_h,6,stroke=1,fill=0)
-    c.setFont("Bangla",17)
-    c.drawCentredString(W/2,heading_y+heading_h/2-6,"ট্রান্সফার সার্টিফিকেট")
+    c.setFont(BANG_FONT,17)
+    c.drawCentredString(W/2,heading_y+heading_h/2-6,"Transfer Certificate")
 
     # Table
     table_x = left
     table_y_top = heading_y-20*mm
     cell_w1,cell_w2,cell_h = 30*mm,55*mm,9*mm
-    c.setFont("Bangla",11)
-    keys = ["S/N","তারিখ","আইডি নং","শ্রেণি","সেশন"]
+    c.setFont(BANG_FONT,11)
+    keys = ["S/N","Date","ID No","Class","Session"]
     vals = [str(sn),date,student_id,student_class,session]
     for i,key in enumerate(keys):
         y = table_y_top-i*cell_h
         c.rect(table_x,y-cell_h,cell_w1,cell_h)
         c.rect(table_x+cell_w1,y-cell_h,cell_w2,cell_h)
         c.drawString(table_x+3,y-cell_h/2+2,key)
-        c.drawString(table_x+cell_w1+4,y-cell_h/2+2,vals[i])
+        c.drawString(table_x+cell_w1+4,y-cell_h/2+2,str(vals[i]))
 
+    # Intro Paragraph
     intro_y = table_y_top-len(keys)*cell_h-10*mm
-    c.setFont("Bangla",17)
+    c.setFont(BANG_FONT,17)
     c.drawCentredString(W/2,intro_y,"This is to certify that")
 
     paragraph = (
         f"{name}, {son_daughter} of {father} and {mother}, "
-        f"{student_class} শ্রেণির ছাত্র/ছাত্রী (ID: {student_id}) ছিলেন। "
-        f"জন্ম তারিখ: {dob}। শিক্ষাজীবনের সময় আচরণ ও শৃঙ্খলা ভালো ছিল। "
-        f"{He_She} এর ভবিষ্যতের জন্য শুভকামনা।"
+        f"was a student of Class {student_class} (Bearing ID/Roll: {student_id}) at "
+        f"Daffodil University School & College. As per our record, {his_her} date of birth "
+        f"is {dob}. During {his_her} stay, {he_she} maintained good conduct and discipline. "
+        f"We wish {Him_Her} every success in future life."
     )
 
     sig_y = 110*mm
-    style = ParagraphStyle(name="JustifyTC", fontName="Bangla", fontSize=11, leading=14, alignment=TA_JUSTIFY)
+    style = ParagraphStyle(name="JustifyTC", fontName=BANG_FONT, fontSize=11, leading=14, alignment=TA_JUSTIFY)
     p = Paragraph(paragraph, style)
     frame_bottom = sig_y+15*mm
     frame_top = intro_y-10
@@ -229,9 +242,10 @@ def generate_tc_pdf(entry, gender, pdf_path):
     frame = Frame(left,frame_y,W-left-right,frame_height,showBoundary=0)
     frame.addFromList([p],c)
 
+    # Signature
     line_width = 60*mm
     c.line(left,sig_y,left+line_width,sig_y)
-    c.setFont("Bangla",11)
+    c.setFont(BANG_FONT,11)
     text_lines = ["SK Mahmudun Nabi","Principal (Acting)","Daffodil University School & College"]
     for i,line in enumerate(text_lines):
         c.drawString(left,sig_y-12-i*12,line)
@@ -315,8 +329,7 @@ with col_gen:
         pdf_path = f"testimonial_{entry['ID']}.pdf"
         generate_testimonial_pdf(entry, st.session_state.form_gender, pdf_path)
         st.success(f"Testimonial PDF Generated: {pdf_path}")
-        with open(pdf_path, "rb") as f:
-            st.download_button("Download PDF", f, file_name=os.path.basename(pdf_path))
+        st.download_button("Download PDF", pdf_path, file_name=os.path.basename(pdf_path))
 
 with col_preview:
     if st.button("Generate Transfer Certificate PDF"):
@@ -336,8 +349,7 @@ with col_preview:
         pdf_path = f"transfer_certificate_{entry['ID']}.pdf"
         generate_tc_pdf(entry, st.session_state.form_gender, pdf_path)
         st.success(f"Transfer Certificate PDF Generated: {pdf_path}")
-        with open(pdf_path, "rb") as f:
-            st.download_button("Download PDF", f, file_name=os.path.basename(pdf_path))
+        st.download_button("Download PDF", pdf_path, file_name=os.path.basename(pdf_path))
 
 # ----------------------------
 # Show Excel Table
