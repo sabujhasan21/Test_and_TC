@@ -310,7 +310,14 @@ with col_gen:
         pdf_path = f"testimonial_{entry['ID']}.pdf"
         generate_testimonial_pdf(entry, st.session_state.form_gender, pdf_path)
         st.success(f"Testimonial PDF Generated: {pdf_path}")
-        st.download_button("Download PDF", pdf_path)
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+            st.download_button(
+                label="Download PDF",
+                data=pdf_bytes,
+                file_name=pdf_path,
+                mime="application/pdf"
+            )
 
 with col_preview:
     if st.button("Generate Transfer Certificate PDF"):
@@ -330,7 +337,14 @@ with col_preview:
         pdf_path = f"transfer_certificate_{entry['ID']}.pdf"
         generate_tc_pdf(entry, st.session_state.form_gender, pdf_path)
         st.success(f"Transfer Certificate PDF Generated: {pdf_path}")
-        st.download_button("Download PDF", pdf_path)
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+            st.download_button(
+                label="Download PDF",
+                data=pdf_bytes,
+                file_name=pdf_path,
+                mime="application/pdf"
+            )
 
 # ----------------------------
 # Show Excel Table
