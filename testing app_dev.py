@@ -162,12 +162,12 @@ def generate_testimonial_pdf(entry, gender, pdf_path):
     )
 
     style = ParagraphStyle(
-        name="Justify",
-        fontName=BANG_FONT,
-        fontSize=11,
-        leading=14,
-        alignment=TA_JUSTIFY,
-    )
+    name="Justify",
+    fontName=BANG_FONT,
+    fontSize=11,
+    leading=14,
+    alignment=TA_JUSTIFY,
+)
 
     p = Paragraph(paragraph, style)
     frame = Frame(left, sig_y + 15*mm, W-left-right, paragraph_start_y - (sig_y + 15*mm), showBoundary=0)
