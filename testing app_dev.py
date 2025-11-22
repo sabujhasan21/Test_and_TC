@@ -23,9 +23,9 @@ try:
         pdfmetrics.registerFont(TTFont("Bangla", FONT_PATH))
         BANG_FONT = "Bangla"
     else:
-        st.warning("⚠ Bangla font not found — using default font.")
+        st.warning("⚠ Bangla font not found — using English font.")
 except TTFError:
-    st.warning("⚠ Error loading Bangla font — using default font.")
+    st.warning("⚠ Error loading Bangla font — using English font.")
 
 # ----------------------------
 # Student Database
@@ -100,7 +100,7 @@ class StudentDatabase:
             pass
 
 # ----------------------------
-# PDF Generators
+# PDF Generator
 # ----------------------------
 def generate_testimonial_pdf(entry, gender, pdf_path):
     sn = entry["Serial"]
@@ -123,34 +123,35 @@ def generate_testimonial_pdf(entry, gender, pdf_path):
     left,right = 25*mm,25*mm
 
     # Heading
-    heading_w,heading_h = 120*mm,18*mm
-    heading_x = (W-heading_w)/2
-    heading_y = H-60*mm
-    c.roundRect(heading_x,heading_y,heading_w,heading_h,6)
-    c.setFont(BANG_FONT,17)
-    c.drawCentredString(W/2,heading_y+heading_h/2-6,"Testimonial Certificate")
+    heading_w, heading_h = 120*mm, 18*mm
+    heading_x = (W - heading_w)/2
+    heading_y = H - 60*mm
+    c.roundRect(heading_x, heading_y, heading_w, heading_h, 6)
+    c.setFont(BANG_FONT, 17)
+    c.drawCentredString(W/2, heading_y + heading_h/2 - 6, "Testimonial Certificate")
 
     # Table
     table_x = left
-    table_y_top = heading_y-20*mm
-    cell_w1,cell_w2,cell_h = 30*mm,55*mm,9*mm
-    c.setFont(BANG_FONT,11)
+    table_y_top = heading_y - 20*mm
+    cell_w1, cell_w2, cell_h = 30*mm, 55*mm, 9*mm
+    c.setFont(BANG_FONT, 11)
     keys = ["S/N","Date","ID No","Class","Session"]
-    vals = [str(sn),date,student_id,student_class,session]
+    vals = [str(sn), date, student_id, student_class, session]
     for i,key in enumerate(keys):
-        y = table_y_top-i*cell_h
-        c.rect(table_x,y-cell_h,cell_w1,cell_h)
-        c.rect(table_x+cell_w1,y-cell_h,cell_w2,cell_h)
-        c.drawString(table_x+3,y-cell_h/2+2,key)
-        c.drawString(table_x+cell_w1+4,y-cell_h/2+2,str(vals[i]))
+        y = table_y_top - i*cell_h
+        c.rect(table_x, y-cell_h, cell_w1, cell_h)
+        c.rect(table_x+cell_w1, y-cell_h, cell_w2, cell_h)
+        c.drawString(table_x+3, y-cell_h/2+2, key)
+        c.drawString(table_x+cell_w1+4, y-cell_h/2+2, str(vals[i]))
 
     # Paragraph
-    intro_y = table_y_top-len(keys)*cell_h-10*mm
-    c.setFont(BANG_FONT,17)
-    c.drawCentredString(W/2,intro_y,"This is to certify that")
-       # ➜ Extra space before paragraph
-    paragraph_y = intro_y - 15*mm  # <-- ekhane 15mm gap add kora holo, apni onujayi adjust korte paren
-    
+    intro_y = table_y_top - len(keys)*cell_h - 10*mm
+    c.setFont(BANG_FONT, 17)
+    c.drawCentredString(W/2, intro_y, "This is to certify that")
+
+    # Extra space before paragraph
+    paragraph_y = intro_y - 15*mm
+
     paragraph = (
         f"{name} {son_daughter} of {father} and {mother} is a student of Class {student_class}. "
         f"Bearing ID/Roll: {student_id} in Daffodil University School & College. "
@@ -158,7 +159,7 @@ def generate_testimonial_pdf(entry, gender, pdf_path):
         f"To the best of my knowledge {he_she} was well mannered and possessed a good moral character. "
         f"{He_She} did not indulge {Him_Her}self in any activity subversive to the discipline. "
         f"I wish {Him_Her} every success in life."
-        )
+    )
 
     style = ParagraphStyle(
         name="Justify",
@@ -169,8 +170,7 @@ def generate_testimonial_pdf(entry, gender, pdf_path):
     )
 
     p = Paragraph(paragraph, style)
-
-    # Adjust frame to start from paragraph_y
+    sig_y = 110*mm
     frame_bottom = sig_y + 15*mm
     frame_top = paragraph_y - 5
     frame_height = max(40*mm, frame_top - frame_bottom)
@@ -180,14 +180,16 @@ def generate_testimonial_pdf(entry, gender, pdf_path):
 
     # Signature
     line_width = 60*mm
-    c.line(left,sig_y,left+line_width,sig_y)
-    c.setFont(BANG_FONT,11)
-    text_lines = ["SK Mahmudun Nabi","Principal (Acting)","Daffodil University School & College"]
-    for i,line in enumerate(text_lines):
-        c.drawString(left,sig_y-12-i*12,line)
+    c.line(left, sig_y, left+line_width, sig_y)
+    c.setFont(BANG_FONT, 11)
+    for i, line in enumerate(["SK Mahmudun Nabi","Principal (Acting)","Daffodil University School & College"]):
+        c.drawString(left, sig_y-12-i*12, line)
 
     c.save()
 
+# ----------------------------
+# Transfer Certificate PDF
+# ----------------------------
 def generate_tc_pdf(entry, gender, pdf_path):
     sn = entry["Serial"]
     date = entry["Date"]
@@ -209,55 +211,64 @@ def generate_tc_pdf(entry, gender, pdf_path):
     left,right = 25*mm,25*mm
 
     # Heading
-    heading_w,heading_h = 120*mm,18*mm
-    heading_x = (W-heading_w)/2
-    heading_y = H-60*mm
-    c.roundRect(heading_x,heading_y,heading_w,heading_h,6)
-    c.setFont(BANG_FONT,17)
-    c.drawCentredString(W/2,heading_y+heading_h/2-6,"Transfer Certificate")
+    heading_w, heading_h = 120*mm, 18*mm
+    heading_x = (W - heading_w)/2
+    heading_y = H - 60*mm
+    c.roundRect(heading_x, heading_y, heading_w, heading_h, 6)
+    c.setFont(BANG_FONT, 17)
+    c.drawCentredString(W/2, heading_y+heading_h/2 - 6, "Transfer Certificate")
 
     # Table
     table_x = left
-    table_y_top = heading_y-20*mm
-    cell_w1,cell_w2,cell_h = 30*mm,55*mm,9*mm
-    c.setFont(BANG_FONT,11)
+    table_y_top = heading_y - 20*mm
+    cell_w1, cell_w2, cell_h = 30*mm, 55*mm, 9*mm
+    c.setFont(BANG_FONT, 11)
     keys = ["S/N","Date","ID No","Class","Session"]
-    vals = [str(sn),date,student_id,student_class,session]
+    vals = [str(sn), date, student_id, student_class, session]
     for i,key in enumerate(keys):
-        y = table_y_top-i*cell_h
-        c.rect(table_x,y-cell_h,cell_w1,cell_h)
-        c.rect(table_x+cell_w1,y-cell_h,cell_w2,cell_h)
-        c.drawString(table_x+3,y-cell_h/2+2,key)
-        c.drawString(table_x+cell_w1+4,y-cell_h/2+2,str(vals[i]))
+        y = table_y_top - i*cell_h
+        c.rect(table_x, y-cell_h, cell_w1, cell_h)
+        c.rect(table_x+cell_w1, y-cell_h, cell_w2, cell_h)
+        c.drawString(table_x+3, y-cell_h/2+2, key)
+        c.drawString(table_x+cell_w1+4, y-cell_h/2+2, str(vals[i]))
 
     # Paragraph
-    intro_y = table_y_top-len(keys)*cell_h-10*mm
-    c.setFont(BANG_FONT,17)
-    c.drawCentredString(W/2,intro_y,"This is to certify that")
-    paragraph_y = intro_y - 8*mm  # Line gap
+    intro_y = table_y_top - len(keys)*cell_h - 10*mm
+    c.setFont(BANG_FONT, 17)
+    c.drawCentredString(W/2, intro_y, "This is to certify that")
+
+    # Extra space
+    paragraph_y = intro_y - 15*mm
 
     paragraph = (
         f"{name}, {son_daughter} of {father} and {mother}, was a student of Class {student_class} "
-        f"(Bearing ID/Roll: {student_id}) at Daffodil University School & College. "
-        f"As per our record, {his_her} date of birth is {dob}. "
-        f"During {his_her} stay, {he_she} maintained good conduct and discipline. "
-        f"We wish {Him_Her} every success in future life."
+        f"(Bearing ID/Roll: {student_id}) at Daffodil University School & College. As per our "
+        f"record, {his_her} date of birth is {dob}. During {his_her} stay, {he_she} maintained "
+        f"good conduct and discipline. We wish {Him_Her} success in future life."
     )
 
-    style = ParagraphStyle(name="JustifyTC", fontName=BANG_FONT, fontSize=11, leading=14, alignment=TA_JUSTIFY)
+    style = ParagraphStyle(
+        name="JustifyTC",
+        fontName=BANG_FONT,
+        fontSize=11,
+        leading=14,
+        alignment=TA_JUSTIFY,
+    )
+
     p = Paragraph(paragraph, style)
     sig_y = 110*mm
-    frame_bottom = sig_y+15*mm
-    frame_top = paragraph_y-10
-    frame_height = max(40*mm, frame_top-frame_bottom)
+    frame_bottom = sig_y + 15*mm
+    frame_top = paragraph_y - 5
+    frame_height = max(40*mm, frame_top - frame_bottom)
+
     frame = Frame(left, frame_bottom, W-left-right, frame_height, showBoundary=0)
     frame.addFromList([p], c)
 
     # Signature
-    c.line(left,sig_y,left+60*mm,sig_y)
-    c.setFont(BANG_FONT,11)
-    for i,line in enumerate(["SK Mahmudun Nabi","Principal (Acting)","Daffodil University School & College"]):
-        c.drawString(left,sig_y-12-i*12,line)
+    c.line(left, sig_y, left+60*mm, sig_y)
+    c.setFont(BANG_FONT, 11)
+    for i, line in enumerate(["SK Mahmudun Nabi","Principal (Acting)","Daffodil University School & College"]):
+        c.drawString(left, sig_y-12-i*12, line)
 
     c.save()
 
@@ -267,18 +278,21 @@ def generate_tc_pdf(entry, gender, pdf_path):
 st.set_page_config(page_title="Testimonial & TC Generator", layout="wide")
 st.title("Testimonial & Transfer Certificate Generator (Excel-based)")
 
+# Session state
 for key in ["form_serial","form_date","form_id","form_class","form_session","form_name","form_father","form_mother","form_dob","form_gender"]:
     if key not in st.session_state:
         st.session_state[key] = "" if "gender" not in key else "Male"
 
 db = StudentDatabase()
 
+# Load Excel
 uploaded_file = st.file_uploader("Upload Excel File", type=["xlsx","xls"])
 if uploaded_file:
     db.load_excel(uploaded_file)
     st.success(f"Excel Loaded. {len(db.df)} students in database.")
     st.session_state.form_serial = db.get_next_serial()
 
+# Form Inputs
 col1,col2 = st.columns(2)
 with col1:
     st.session_state.form_serial = st.number_input("S/N", min_value=1, value=int(st.session_state.form_serial or 1))
@@ -286,7 +300,6 @@ with col1:
     st.session_state.form_id = st.text_input("Student ID", value=st.session_state.form_id)
     st.session_state.form_class = st.text_input("Class", value=st.session_state.form_class)
     st.session_state.form_session = st.text_input("Session", value=st.session_state.form_session)
-
 with col2:
     st.session_state.form_name = st.text_input("Student Name", value=st.session_state.form_name)
     st.session_state.form_father = st.text_input("Father's Name", value=st.session_state.form_father)
@@ -294,7 +307,7 @@ with col2:
     st.session_state.form_dob = st.text_input("Date of Birth (DD/MM/YYYY)", value=st.session_state.form_dob)
     st.session_state.form_gender = st.selectbox("Gender", ["Male","Female"], index=0 if st.session_state.form_gender=="Male" else 1)
 
-# Auto-fill
+# Auto-fill by ID
 if st.session_state.form_id:
     rec = db.get_student_by_id(st.session_state.form_id)
     if rec:
@@ -302,8 +315,7 @@ if st.session_state.form_id:
             st.session_state["form_"+field.lower()] = rec.get(field, st.session_state.get("form_"+field.lower()))
 
 # Generate Buttons
-col_gen,col_tc = st.columns(2)
-
+col_gen, col_tc = st.columns(2)
 with col_gen:
     if st.button("Generate Testimonial PDF"):
         entry = {
@@ -322,7 +334,7 @@ with col_gen:
         pdf_path = f"testimonial_{entry['ID']}_{datetime.now().strftime('%H%M%S')}.pdf"
         generate_testimonial_pdf(entry, st.session_state.form_gender, pdf_path)
         st.success("Testimonial PDF Generated Successfully!")
-        with open(pdf_path,"rb") as f:
+        with open(pdf_path, "rb") as f:
             st.download_button("Download PDF", f, file_name=os.path.basename(pdf_path))
 
 with col_tc:
@@ -343,7 +355,7 @@ with col_tc:
         pdf_path = f"tc_{entry['ID']}_{datetime.now().strftime('%H%M%S')}.pdf"
         generate_tc_pdf(entry, st.session_state.form_gender, pdf_path)
         st.success("Transfer Certificate PDF Generated Successfully!")
-        with open(pdf_path,"rb") as f:
+        with open(pdf_path, "rb") as f:
             st.download_button("Download PDF", f, file_name=os.path.basename(pdf_path))
 
 # Show Database
@@ -354,13 +366,3 @@ if not db.df.empty:
         db.df = edited_df
         db.save_excel()
         st.success("Excel Saved Successfully!")
-
-
-
-
-
-
-
-
-
-
