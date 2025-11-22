@@ -100,7 +100,7 @@ class StudentDatabase:
             pass
 
 # ----------------------------
-# PDF Generation
+# PDF Generators
 # ----------------------------
 def generate_testimonial_pdf(entry, gender, pdf_path):
     sn = entry["Serial"]
@@ -148,8 +148,7 @@ def generate_testimonial_pdf(entry, gender, pdf_path):
     intro_y = table_y_top-len(keys)*cell_h-10*mm
     c.setFont(BANG_FONT,17)
     c.drawCentredString(W/2,intro_y,"This is to certify that")
-
-    paragraph_y = intro_y - 8*mm  # LINE GAP ADDED
+    paragraph_y = intro_y - 8*mm  # Line gap
 
     paragraph = (
         f"{name} {son_daughter} of {father} and {mother} is a student of Class {student_class}. "
@@ -179,6 +178,78 @@ def generate_testimonial_pdf(entry, gender, pdf_path):
 
     c.save()
 
+def generate_tc_pdf(entry, gender, pdf_path):
+    sn = entry["Serial"]
+    date = entry["Date"]
+    student_id = entry["ID"]
+    student_class = entry["Class"]
+    session = entry["Session"]
+    name = entry["Name"]
+    father = entry["Father"]
+    mother = entry["Mother"]
+    dob = entry["DOB"]
+
+    if gender.lower()=="male":
+        he_she, He_She, his_her, Him_Her, son_daughter = "he","He","his","him","son"
+    else:
+        he_she, He_She, his_her, Him_Her, son_daughter = "she","She","her","her","daughter"
+
+    c = canvas.Canvas(pdf_path, pagesize=A4)
+    W,H = A4
+    left,right = 25*mm,25*mm
+
+    # Heading
+    heading_w,heading_h = 120*mm,18*mm
+    heading_x = (W-heading_w)/2
+    heading_y = H-60*mm
+    c.roundRect(heading_x,heading_y,heading_w,heading_h,6)
+    c.setFont(BANG_FONT,17)
+    c.drawCentredString(W/2,heading_y+heading_h/2-6,"Transfer Certificate")
+
+    # Table
+    table_x = left
+    table_y_top = heading_y-20*mm
+    cell_w1,cell_w2,cell_h = 30*mm,55*mm,9*mm
+    c.setFont(BANG_FONT,11)
+    keys = ["S/N","Date","ID No","Class","Session"]
+    vals = [str(sn),date,student_id,student_class,session]
+    for i,key in enumerate(keys):
+        y = table_y_top-i*cell_h
+        c.rect(table_x,y-cell_h,cell_w1,cell_h)
+        c.rect(table_x+cell_w1,y-cell_h,cell_w2,cell_h)
+        c.drawString(table_x+3,y-cell_h/2+2,key)
+        c.drawString(table_x+cell_w1+4,y-cell_h/2+2,str(vals[i]))
+
+    # Paragraph
+    intro_y = table_y_top-len(keys)*cell_h-10*mm
+    c.setFont(BANG_FONT,17)
+    c.drawCentredString(W/2,intro_y,"This is to certify that")
+    paragraph_y = intro_y - 8*mm  # Line gap
+
+    paragraph = (
+        f"{name}, {son_daughter} of {father} and {mother}, was a student of Class {student_class} "
+        f"(Bearing ID/Roll: {student_id}) at Daffodil University School & College. "
+        f"As per our record, {his_her} date of birth is {dob}. "
+        f"During {his_her} stay, {he_she} maintained good conduct and discipline. "
+        f"We wish {Him_Her} every success in future life."
+    )
+
+    style = ParagraphStyle(name="JustifyTC", fontName=BANG_FONT, fontSize=11, leading=14, alignment=TA_JUSTIFY)
+    p = Paragraph(paragraph, style)
+    sig_y = 110*mm
+    frame_bottom = sig_y+15*mm
+    frame_top = paragraph_y-10
+    frame_height = max(40*mm, frame_top-frame_bottom)
+    frame = Frame(left, frame_bottom, W-left-right, frame_height, showBoundary=0)
+    frame.addFromList([p], c)
+
+    # Signature
+    c.line(left,sig_y,left+60*mm,sig_y)
+    c.setFont(BANG_FONT,11)
+    for i,line in enumerate(["SK Mahmudun Nabi","Principal (Acting)","Daffodil University School & College"]):
+        c.drawString(left,sig_y-12-i*12,line)
+
+    c.save()
 
 # ----------------------------
 # Streamlit App
@@ -212,3 +283,64 @@ with col2:
     st.session_state.form_mother = st.text_input("Mother's Name", value=st.session_state.form_mother)
     st.session_state.form_dob = st.text_input("Date of Birth (DD/MM/YYYY)", value=st.session_state.form_dob)
     st.session_state.form_gender = st.selectbox("Gender", ["Male","Female"], index=0 if st.session_state.form_gender=="Male" else 1)
+
+# Auto-fill
+if st.session_state.form_id:
+    rec = db.get_student_by_id(st.session_state.form_id)
+    if rec:
+        for field in ["Serial","Name","Father","Mother","Class","Session","DOB"]:
+            st.session_state["form_"+field.lower()] = rec.get(field, st.session_state.get("form_"+field.lower()))
+
+# Generate Buttons
+col_gen,col_tc = st.columns(2)
+
+with col_gen:
+    if st.button("Generate Testimonial PDF"):
+        entry = {
+            "Serial": int(st.session_state.form_serial),
+            "ID": st.session_state.form_id,
+            "Name": st.session_state.form_name,
+            "Father": st.session_state.form_father,
+            "Mother": st.session_state.form_mother,
+            "Class": st.session_state.form_class,
+            "Session": st.session_state.form_session,
+            "DOB": st.session_state.form_dob,
+            "Date": st.session_state.form_date.strftime("%d/%m/%Y")
+        }
+        db.upsert_student(entry)
+        db.save_excel()
+        pdf_path = f"testimonial_{entry['ID']}_{datetime.now().strftime('%H%M%S')}.pdf"
+        generate_testimonial_pdf(entry, st.session_state.form_gender, pdf_path)
+        st.success("Testimonial PDF Generated Successfully!")
+        with open(pdf_path,"rb") as f:
+            st.download_button("Download PDF", f, file_name=os.path.basename(pdf_path))
+
+with col_tc:
+    if st.button("Generate Transfer Certificate PDF"):
+        entry = {
+            "Serial": int(st.session_state.form_serial),
+            "ID": st.session_state.form_id,
+            "Name": st.session_state.form_name,
+            "Father": st.session_state.form_father,
+            "Mother": st.session_state.form_mother,
+            "Class": st.session_state.form_class,
+            "Session": st.session_state.form_session,
+            "DOB": st.session_state.form_dob,
+            "Date": st.session_state.form_date.strftime("%d/%m/%Y")
+        }
+        db.upsert_student(entry)
+        db.save_excel()
+        pdf_path = f"tc_{entry['ID']}_{datetime.now().strftime('%H%M%S')}.pdf"
+        generate_tc_pdf(entry, st.session_state.form_gender, pdf_path)
+        st.success("Transfer Certificate PDF Generated Successfully!")
+        with open(pdf_path,"rb") as f:
+            st.download_button("Download PDF", f, file_name=os.path.basename(pdf_path))
+
+# Show Database
+st.subheader("Student Database")
+if not db.df.empty:
+    edited_df = st.data_editor(db.df, num_rows="dynamic")
+    if st.button("Save Edited Excel"):
+        db.df = edited_df
+        db.save_excel()
+        st.success("Excel Saved Successfully!")
