@@ -1,6 +1,5 @@
-streamlit
+streamlit>=1.30.0
 pandas
-Pillow
-reportlab
-python-docx
 openpyxl
+reportlab
+PyMuPDF
