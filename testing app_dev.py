@@ -161,7 +161,9 @@ def generate_testimonial_pdf(entry, gender, pdf_path):
     p = Paragraph(paragraph, style)
     frame_bottom = sig_y+15*mm
     frame_top = intro_y-10
-    frame_height = max(30*mm, frame_top-frame_bottom)
+    frame_height = frame_top - frame_bottom
+    if frame_height < 40*mm:
+    frame_height = 40*mm
     frame_y = frame_bottom
     frame = Frame(left,frame_y,W-left-right,frame_height,showBoundary=0)
     frame.addFromList([p],c)
@@ -361,3 +363,4 @@ if not db.df.empty:
         db.df = edited_df
         db.save_excel()
         st.success("Excel Saved Successfully!")
+
