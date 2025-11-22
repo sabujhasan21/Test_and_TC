@@ -19,7 +19,7 @@ import streamlit as st
 FONT_PATH = os.path.join(os.path.dirname(__file__), "fonts", "SolaimanLipi.ttf")
 
 # Default safe English font
-BANG_FONT = "Helvetica"
+BANG_FONT = "Times-Roman"
 
 try:
     if os.path.exists(FONT_PATH):
@@ -405,4 +405,5 @@ if not db.df.empty:
         db.df = edited_df
         db.save_excel()
         st.success("Excel Saved Successfully!")
+
 
