@@ -163,7 +163,7 @@ def generate_testimonial_pdf(entry, gender, pdf_path):
     c.setFont(BANG_FONT, 17)
     c.drawCentredString(W/2, intro_y, "This is to certify that")
     # ➜ Add one-line gap before paragraph
-    paragraph_y = intro_y - 8*mm   # <-- LINE GAP ADDED
+    paragraph_y = intro_y - 40*mm   # <-- LINE GAP ADDED
     paragraph = (
         f"{name} {son_daughter} of {father} and {mother} is a student of Class {student_class}. "
         f"Bearing ID/Roll: {student_id} in Daffodil University School & College. "
@@ -406,6 +406,7 @@ if not db.df.empty:
         db.df = edited_df
         db.save_excel()
         st.success("Excel Saved Successfully!")
+
 
 
 
