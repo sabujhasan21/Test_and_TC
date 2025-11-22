@@ -159,33 +159,46 @@ def generate_testimonial_pdf(entry, gender, pdf_path):
         c.drawString(table_x+cell_w1+4, y-cell_h/2+2, str(vals[i]))
 
     # Paragraph
-    intro_y = table_y_top - len(keys)*cell_h - 10*mm
+intro_y = table_y_top - len(keys)*cell_h - 10*mm
 
-    # Heading
-    c.setFont(BANG_FONT, 17)
-    c.drawCentredString(W/2, intro_y, "This is to certify that")
+# Heading
+c.setFont(BANG_FONT, 17)
+c.drawCentredString(W/2, intro_y, "This is to certify that")
 
-    # ➜ Add one-line gap before paragraph
-    paragraph_y = intro_y - 8*mm   # <-- LINE GAP ADDED
+# ➜ Add one-line gap before paragraph
+paragraph_y = intro_y - 8*mm   # <-- GAP ADDED
 
-    paragraph = (
-        f"{name} {son_daughter} of {father} and {mother} is a student of Class {student_class}. "
-        f"Bearing ID/Roll: {student_id} in Daffodil University School & College. "
-        f"As per our admission record {his_her} date of birth is {dob}. "
-        f"To the best of my knowledge {he_she} was well mannered and possessed a good moral character. "
-        f"{He_She} did not indulge {Him_Her}self in any activity subversive to the discipline. "
-        f"I wish {Him_Her} every success in life."
-    )
+paragraph = (
+    f"{name} {son_daughter} of {father} and {mother} is a student of Class {student_class}. "
+    f"Bearing ID/Roll: {student_id} in Daffodil University School & College. "
+    f"As per our admission record {his_her} date of birth is {dob}. "
+    f"To the best of my knowledge {he_she} was well mannered and possessed a good moral character. "
+    f"{He_She} did not indulge {Him_Her}self in any activity subversive to the discipline. "
+    f"I wish {Him_Her} every success in life."
+)
 
-    sig_y = 110*mm
+sig_y = 110*mm
 
-    style = ParagraphStyle(
-        name="Justify",
-        fontName=BANG_FONT,
-        fontSize=11,
-        leading=14,
-        alignment=TA_JUSTIFY,
-    )
+style = ParagraphStyle(
+    name="Justify",
+    fontName=BANG_FONT,
+    fontSize=11,
+    leading=14,
+    alignment=TA_JUSTIFY,
+)
+
+p = Paragraph(paragraph, style)
+frame_bottom = sig_y + 15*mm
+
+# BEFORE: frame_top = intro_y - 10
+# NOW: USE paragraph_y so gap applies properly
+frame_top = paragraph_y - 2*mm
+
+frame_height = max(40*mm, frame_top - frame_bottom)
+
+frame = Frame(left, frame_bottom, W-left-right, frame_height, showBoundary=0)
+frame.addFromList([p], c)
+
 
     p = Paragraph(paragraph, style)
     frame_bottom = sig_y + 15*mm
@@ -410,6 +423,7 @@ if not db.df.empty:
         db.df = edited_df
         db.save_excel()
         st.success("Excel Saved Successfully!")
+
 
 
 
