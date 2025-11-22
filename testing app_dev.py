@@ -14,18 +14,22 @@ from reportlab.pdfbase.ttfonts import TTFont, TTFError
 import streamlit as st
 
 # ----------------------------
-# Font Setup
+# Font Setup (Improved Safe Version)
 # ----------------------------
 FONT_PATH = os.path.join(os.path.dirname(__file__), "fonts", "SolaimanLipi.ttf")
-BANG_FONT = "Times-Roman"
+
+# Default safe English font
+BANG_FONT = "Helvetica"
+
 try:
     if os.path.exists(FONT_PATH):
         pdfmetrics.registerFont(TTFont("Bangla", FONT_PATH))
         BANG_FONT = "Bangla"
     else:
-        st.warning(f"Bangla font not found at {FONT_PATH}, using default font.")
+        st.warning("⚠ Bangla font not found — using English safe font.")
 except TTFError:
-    st.warning("Error registering Bangla font, using default font.")
+    st.warning("⚠ Error loading Bangla font — using English safe font.")
+
 
 # ----------------------------
 # Student Database
@@ -45,18 +49,24 @@ class StudentDatabase:
         df = pd.read_excel(path, engine="openpyxl")
         df.columns = [str(c).strip() for c in df.columns]
         expected = ["Serial","ID","Name","Father","Mother","Class","Session","DOB"]
+
         for col in expected:
             if col not in df.columns:
                 df[col] = ""
-        df["ID"] = df["ID"].apply(lambda x: str(int(float(x))) if str(x).replace(".","",1).isdigit() else str(x))
-        self.df = df[expected].copy()
+
+        df["ID"] = df["ID"].astype(str)
+
         try:
-            self.df["Serial"] = pd.to_numeric(self.df["Serial"], errors="coerce").fillna(0).astype(int)
+            df["Serial"] = pd.to_numeric(df["Serial"], errors="coerce").fillna(0).astype(int)
         except:
             pass
-        self.filepath = self.storage_path if copy_to_storage else path
+
+        self.df = df[expected].copy()
+
         if copy_to_storage:
             shutil.copy(path, self.storage_path)
+
+        self.filepath = self.storage_path if copy_to_storage else path
 
     def save_excel(self, path=None):
         if not path:
@@ -65,15 +75,17 @@ class StudentDatabase:
         self.filepath = path
 
     def get_next_serial(self):
-        if self.df.empty: return 1
+        if self.df.empty:
+            return 1
         try:
-            ser = pd.to_numeric(self.df["Serial"].dropna(), errors="coerce").astype(int)
+            ser = pd.to_numeric(self.df["Serial"], errors="coerce").astype(int)
             return int(ser.max())+1 if not ser.empty else 1
         except:
             return 1
 
     def get_student_by_id(self, student_id):
-        if not student_id: return None
+        if not student_id:
+            return None
         matches = self.df[self.df["ID"].astype(str)==str(student_id)]
         if not matches.empty:
             row = matches.iloc[0]
@@ -82,22 +94,25 @@ class StudentDatabase:
 
     def upsert_student(self, data: dict):
         sid = str(data.get("ID","")).strip()
-        if sid == "": raise ValueError("ID required")
+        if sid == "":
+            raise ValueError("ID required")
         idx = self.df[self.df["ID"].astype(str)==sid].index
-        if len(idx)>0:
+        if len(idx) > 0:
             i = idx[0]
             for k,v in data.items():
                 if k in self.df.columns:
                     self.df.at[i,k] = v
         else:
             self.df = pd.concat([self.df, pd.DataFrame([data])], ignore_index=True)
+
         try:
             self.df["Serial"] = pd.to_numeric(self.df["Serial"], errors="coerce").fillna(0).astype(int)
         except:
             pass
 
+
 # ----------------------------
-# PDF Generation Helpers
+# PDF Generator (Safe Version)
 # ----------------------------
 def generate_testimonial_pdf(entry, gender, pdf_path):
     sn = entry["Serial"]
@@ -120,65 +135,76 @@ def generate_testimonial_pdf(entry, gender, pdf_path):
     left,right = 25*mm,25*mm
 
     # Heading
-    heading_w,heading_h = 120*mm,18*mm
-    heading_x = (W-heading_w)/2
-    heading_y = H-60*mm
-    c.setLineWidth(1)
-    c.roundRect(heading_x,heading_y,heading_w,heading_h,6,stroke=1,fill=0)
-    c.setFont(BANG_FONT,17)
-    c.drawCentredString(W/2,heading_y+heading_h/2-6,"Testimonial Certificate")
+    heading_w, heading_h = 120*mm, 18*mm
+    heading_x = (W - heading_w)/2
+    heading_y = H - 60*mm
+    c.roundRect(heading_x, heading_y, heading_w, heading_h, 6)
+    c.setFont(BANG_FONT, 17)
+    c.drawCentredString(W/2, heading_y + heading_h/2 - 6, "Testimonial Certificate")
 
-    # Left table
+    # Table
     table_x = left
-    table_y_top = heading_y-20*mm
-    cell_w1,cell_w2,cell_h = 30*mm,55*mm,9*mm
-    c.setFont(BANG_FONT,11)
+    table_y_top = heading_y - 20*mm
+    cell_w1, cell_w2, cell_h = 30*mm, 55*mm, 9*mm
+    c.setFont(BANG_FONT, 11)
+
     keys = ["S/N","Date","ID No","Class","Session"]
     vals = [str(sn),date,student_id,student_class,session]
-    for i,key in enumerate(keys):
-        y = table_y_top-i*cell_h
-        c.rect(table_x,y-cell_h,cell_w1,cell_h)
-        c.rect(table_x+cell_w1,y-cell_h,cell_w2,cell_h)
-        c.drawString(table_x+3,y-cell_h/2+2,key)
-        c.drawString(table_x+cell_w1+4,y-cell_h/2+2,str(vals[i]))
 
-    # Intro Paragraph
-    intro_y = table_y_top-len(keys)*cell_h-10*mm
-    c.setFont(BANG_FONT,17)
-    c.drawCentredString(W/2,intro_y,"This is to certify that")
+    for i,key in enumerate(keys):
+        y = table_y_top - i*cell_h
+        c.rect(table_x, y-cell_h, cell_w1, cell_h)
+        c.rect(table_x+cell_w1, y-cell_h, cell_w2, cell_h)
+        c.drawString(table_x+3, y-cell_h/2+2, key)
+        c.drawString(table_x+cell_w1+4, y-cell_h/2+2, str(vals[i]))
+
+    # Paragraph
+    intro_y = table_y_top - len(keys)*cell_h - 10*mm
+    c.setFont(BANG_FONT, 17)
+    c.drawCentredString(W/2, intro_y, "This is to certify that")
 
     paragraph = (
-        f"{name} {son_daughter} of {father} and {mother} is a student of Class: {student_class}. "
+        f"{name} {son_daughter} of {father} and {mother} is a student of Class {student_class}. "
         f"Bearing ID/Roll: {student_id} in Daffodil University School & College. "
         f"As per our admission record {his_her} date of birth is {dob}. "
         f"To the best of my knowledge {he_she} was well mannered and possessed a good moral character. "
-        f"{He_She} did not indulge {Him_Her}self in any activity subversive to the state and discipline during study. "
-        f"I wish {Him_Her} every success in life!"
+        f"{He_She} did not indulge {Him_Her}self in any activity subversive to the discipline. "
+        f"I wish {Him_Her} every success in life."
     )
 
     sig_y = 110*mm
-    style = ParagraphStyle(name="Justify", fontName=BANG_FONT, fontSize=11, leading=14, alignment=TA_JUSTIFY)
+
+    style = ParagraphStyle(
+        name="Justify",
+        fontName=BANG_FONT,
+        fontSize=11,
+        leading=14,
+        alignment=TA_JUSTIFY,
+    )
+
     p = Paragraph(paragraph, style)
-    frame_bottom = sig_y+15*mm
-    frame_top = intro_y-10
-    frame_height = frame_top - frame_bottom
-    if frame_height < 40*mm:
-    frame_height = 40*mm
-    frame_y = frame_bottom
-    frame = Frame(left,frame_y,W-left-right,frame_height,showBoundary=0)
-    frame.addFromList([p],c)
+    frame_bottom = sig_y + 15*mm
+    frame_top = intro_y - 10
+    frame_height = max(40*mm, frame_top - frame_bottom)
+
+    frame = Frame(left, frame_bottom, W-left-right, frame_height, showBoundary=0)
+    frame.addFromList([p], c)
 
     # Signature
     line_width = 60*mm
-    c.line(left,sig_y,left+line_width,sig_y)
-    c.setFont(BANG_FONT,11)
-    text_lines = ["SK Mahmudun Nabi","Principal (Acting)","Daffodil University School & College"]
-    for i,line in enumerate(text_lines):
-        c.drawString(left,sig_y-12-i*12,line)
+    c.line(left, sig_y, left+line_width, sig_y)
+    c.setFont(BANG_FONT, 11)
+    for i, line in enumerate(["SK Mahmudun Nabi","Principal (Acting)","Daffodil University School & College"]):
+        c.drawString(left, sig_y-12-i*12, line)
+
     c.save()
 
+
+# ----------------------------
+# Transfer Certificate PDF
+# ----------------------------
 def generate_tc_pdf(entry, gender, pdf_path):
-    # Same structure as testimonial PDF, heading changed
+
     sn = entry["Serial"]
     date = entry["Date"]
     student_id = entry["ID"]
@@ -199,59 +225,67 @@ def generate_tc_pdf(entry, gender, pdf_path):
     left,right = 25*mm,25*mm
 
     # Heading
-    heading_w,heading_h = 120*mm,18*mm
-    heading_x = (W-heading_w)/2
-    heading_y = H-60*mm
-    c.setLineWidth(1)
-    c.roundRect(heading_x,heading_y,heading_w,heading_h,6,stroke=1,fill=0)
-    c.setFont(BANG_FONT,17)
-    c.drawCentredString(W/2,heading_y+heading_h/2-6,"Transfer Certificate")
+    heading_w, heading_h = 120*mm, 18*mm
+    heading_x = (W - heading_w)/2
+    heading_y = H - 60*mm
+    c.roundRect(heading_x, heading_y, heading_w, heading_h, 6)
+    c.setFont(BANG_FONT, 17)
+    c.drawCentredString(W/2, heading_y+heading_h/2 - 6, "Transfer Certificate")
 
     # Table
     table_x = left
-    table_y_top = heading_y-20*mm
-    cell_w1,cell_w2,cell_h = 30*mm,55*mm,9*mm
-    c.setFont(BANG_FONT,11)
-    keys = ["S/N","Date","ID No","Class","Session"]
-    vals = [str(sn),date,student_id,student_class,session]
-    for i,key in enumerate(keys):
-        y = table_y_top-i*cell_h
-        c.rect(table_x,y-cell_h,cell_w1,cell_h)
-        c.rect(table_x+cell_w1,y-cell_h,cell_w2,cell_h)
-        c.drawString(table_x+3,y-cell_h/2+2,key)
-        c.drawString(table_x+cell_w1+4,y-cell_h/2+2,str(vals[i]))
+    table_y_top = heading_y - 20*mm
+    cell_w1, cell_w2, cell_h = 30*mm, 55*mm, 9*mm
+    c.setFont(BANG_FONT, 11)
 
-    # Intro Paragraph
-    intro_y = table_y_top-len(keys)*cell_h-10*mm
-    c.setFont(BANG_FONT,17)
-    c.drawCentredString(W/2,intro_y,"This is to certify that")
+    keys = ["S/N","Date","ID No","Class","Session"]
+    vals = [str(sn), date, student_id, student_class, session]
+
+    for i,key in enumerate(keys):
+        y = table_y_top - i*cell_h
+        c.rect(table_x, y-cell_h, cell_w1, cell_h)
+        c.rect(table_x+cell_w1, y-cell_h, cell_w2, cell_h)
+        c.drawString(table_x+3, y-cell_h/2+2, key)
+        c.drawString(table_x+cell_w1+4, y-cell_h/2+2, str(vals[i]))
+
+    # Paragraph
+    intro_y = table_y_top - len(keys)*cell_h - 10*mm
+    c.setFont(BANG_FONT, 17)
+    c.drawCentredString(W/2, intro_y, "This is to certify that")
 
     paragraph = (
-        f"{name}, {son_daughter} of {father} and {mother}, "
-        f"was a student of Class {student_class} (Bearing ID/Roll: {student_id}) at "
-        f"Daffodil University School & College. As per our record, {his_her} date of birth "
-        f"is {dob}. During {his_her} stay, {he_she} maintained good conduct and discipline. "
-        f"We wish {Him_Her} every success in future life."
+        f"{name}, {son_daughter} of {father} and {mother}, was a student of Class {student_class} "
+        f"(Bearing ID/Roll: {student_id}) at Daffodil University School & College. As per our "
+        f"record, {his_her} date of birth is {dob}. During {his_her} stay, {he_she} maintained "
+        f"good conduct and discipline. We wish {Him_Her} success in future life."
     )
 
     sig_y = 110*mm
-    style = ParagraphStyle(name="JustifyTC", fontName=BANG_FONT, fontSize=11, leading=14, alignment=TA_JUSTIFY)
+
+    style = ParagraphStyle(
+        name="JustifyTC",
+        fontName=BANG_FONT,
+        fontSize=11,
+        leading=14,
+        alignment=TA_JUSTIFY,
+    )
+
     p = Paragraph(paragraph, style)
-    frame_bottom = sig_y+15*mm
-    frame_top = intro_y-10
-    frame_height = max(30*mm, frame_top-frame_bottom)
-    frame_y = frame_bottom
-    frame = Frame(left,frame_y,W-left-right,frame_height,showBoundary=0)
-    frame.addFromList([p],c)
+    frame_bottom = sig_y + 15*mm
+    frame_top = intro_y - 10
+    frame_height = max(40*mm, frame_top - frame_bottom)
+
+    frame = Frame(left, frame_bottom, W-left-right, frame_height, showBoundary=0)
+    frame.addFromList([p], c)
 
     # Signature
-    line_width = 60*mm
-    c.line(left,sig_y,left+line_width,sig_y)
-    c.setFont(BANG_FONT,11)
-    text_lines = ["SK Mahmudun Nabi","Principal (Acting)","Daffodil University School & College"]
-    for i,line in enumerate(text_lines):
-        c.drawString(left,sig_y-12-i*12,line)
+    c.line(left, sig_y, left+60*mm, sig_y)
+    c.setFont(BANG_FONT, 11)
+    for i, line in enumerate(["SK Mahmudun Nabi","Principal (Acting)","Daffodil University School & College"]):
+        c.drawString(left, sig_y-12-i*12, line)
+
     c.save()
+
 
 # ----------------------------
 # Streamlit App
@@ -259,7 +293,7 @@ def generate_tc_pdf(entry, gender, pdf_path):
 st.set_page_config(page_title="Testimonial & TC Generator", layout="wide")
 st.title("Testimonial & Transfer Certificate Generator (Excel-based)")
 
-# session_state initialization
+# Session state
 for key in ["form_serial","form_date","form_id","form_class","form_session","form_name","form_father","form_mother","form_dob","form_gender"]:
     if key not in st.session_state:
         st.session_state[key] = "" if "gender" not in key else "Male"
@@ -278,7 +312,7 @@ if uploaded_file:
 # ----------------------------
 # Form Inputs
 # ----------------------------
-col1,col2 = st.columns([2,2])
+col1,col2 = st.columns(2)
 
 with col1:
     st.session_state.form_serial = st.number_input("S/N", min_value=1, value=int(st.session_state.form_serial or 1))
@@ -300,18 +334,14 @@ with col2:
 if st.session_state.form_id:
     rec = db.get_student_by_id(st.session_state.form_id)
     if rec:
-        st.session_state.form_serial = rec.get("Serial", st.session_state.form_serial)
-        st.session_state.form_name = rec.get("Name", st.session_state.form_name)
-        st.session_state.form_father = rec.get("Father", st.session_state.form_father)
-        st.session_state.form_mother = rec.get("Mother", st.session_state.form_mother)
-        st.session_state.form_class = rec.get("Class", st.session_state.form_class)
-        st.session_state.form_session = rec.get("Session", st.session_state.form_session)
-        st.session_state.form_dob = rec.get("DOB", st.session_state.form_dob)
+        for field in ["Serial","Name","Father","Mother","Class","Session","DOB"]:
+            st.session_state["form_"+field.lower()] = rec.get(field, st.session_state.get("form_"+field.lower()))
+
 
 # ----------------------------
-# Buttons
+# Generate Buttons
 # ----------------------------
-col_gen,col_preview = st.columns(2)
+col_gen, col_tc = st.columns(2)
 
 with col_gen:
     if st.button("Generate Testimonial PDF"):
@@ -326,14 +356,19 @@ with col_gen:
             "DOB": st.session_state.form_dob,
             "Date": st.session_state.form_date.strftime("%d/%m/%Y")
         }
+
         db.upsert_student(entry)
         db.save_excel()
-        pdf_path = f"testimonial_{entry['ID']}.pdf"
-        generate_testimonial_pdf(entry, st.session_state.form_gender, pdf_path)
-        st.success(f"Testimonial PDF Generated: {pdf_path}")
-        st.download_button("Download PDF", pdf_path, file_name=os.path.basename(pdf_path))
 
-with col_preview:
+        pdf_path = f"testimonial_{entry['ID']}_{datetime.now().strftime('%H%M%S')}.pdf"
+        generate_testimonial_pdf(entry, st.session_state.form_gender, pdf_path)
+
+        st.success("Testimonial PDF Generated Successfully!")
+        with open(pdf_path, "rb") as f:
+            st.download_button("Download PDF", f, file_name=os.path.basename(pdf_path))
+
+
+with col_tc:
     if st.button("Generate Transfer Certificate PDF"):
         entry = {
             "Serial": int(st.session_state.form_serial),
@@ -346,19 +381,26 @@ with col_preview:
             "DOB": st.session_state.form_dob,
             "Date": st.session_state.form_date.strftime("%d/%m/%Y")
         }
+
         db.upsert_student(entry)
         db.save_excel()
-        pdf_path = f"transfer_certificate_{entry['ID']}.pdf"
+
+        pdf_path = f"tc_{entry['ID']}_{datetime.now().strftime('%H%M%S')}.pdf"
         generate_tc_pdf(entry, st.session_state.form_gender, pdf_path)
-        st.success(f"Transfer Certificate PDF Generated: {pdf_path}")
-        st.download_button("Download PDF", pdf_path, file_name=os.path.basename(pdf_path))
+
+        st.success("Transfer Certificate PDF Generated Successfully!")
+        with open(pdf_path, "rb") as f:
+            st.download_button("Download PDF", f, file_name=os.path.basename(pdf_path))
+
 
 # ----------------------------
-# Show Excel Table
+# Show Database
 # ----------------------------
+st.subheader("Student Database")
+
 if not db.df.empty:
-    st.subheader("Student Database")
     edited_df = st.data_editor(db.df, num_rows="dynamic")
+    
     if st.button("Save Edited Excel"):
         db.df = edited_df
         db.save_excel()
